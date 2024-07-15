@@ -1,0 +1,44 @@
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: package.json
+      - name: Install npm dependencies
+        run: pnpm install
+      - name: Download shader_minifier
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download --repo laurentlb/shader-minifier --pattern shader_minifier.exe
+          chmod +x shader_minifier.exe
+          mv shader_minifier.exe /usr/local/bin/shader_minifier
+      - name: Build
+        run: pnpm run build
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
+          publish_branch: gh-pages
+      - name: Upload stats
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-stats
+          path: stats.html
