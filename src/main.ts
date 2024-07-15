@@ -55,6 +55,10 @@ const app: {
 
     mounted() {
         this.patternHelper();
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            this.thread = 1024;
+            this.iteration = 256;
+        }
     },
 
     addUserID() {
@@ -77,6 +81,7 @@ const app: {
         if (!this.userID.length || (this.userIDInput.name && this.userIDInput.email)) {
             this.addUserID();
         }
+        this.generatedKey = undefined;
         this.hashCount = 0;
         this.runningTime = 0;
         this.running = true;
