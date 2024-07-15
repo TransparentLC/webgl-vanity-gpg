@@ -95,7 +95,7 @@
                 <label>密钥指纹格式</label>
                 <input v-model="pattern" type="text" required style="font-variant-ligatures:none">
                 <p>40 个十六进制数字，不区分大小写。空格会被忽略，其他 <code>[\dA-F]</code> 以外的字符表示对该位数字没有要求。</p>
-                <p>最后 <input v-model="patternLength" style="width:3em;padding:unset;text-align:center" type="number" min="1" max="80"> 个数字为 <input v-model="patternNumber" style="width:1em;padding:unset;text-align:center" type="text" pattern="[\dA-Fa-f]"> <a @click="patternHelper">快速设置</a></p>
+                <p>最后 <input v-model="patternLength" style="width:3em;padding:unset;text-align:center" type="number" min="1" max="40"> 个数字为 <input v-model="patternNumber" style="width:1em;padding:unset;text-align:center" type="text" pattern="[\dA-Fa-f]"> <a @click="patternHelper">快速设置</a></p>
                 <p>预计需要计算 {{ estimatedHashCount }} 次 hash，实际的计算次数可能是这个值的几分之一或几倍。</p>
             </div>
             <button @click="toggleKeygen" :class="['btn', 'btn-block', running ? 'btn-error' : 'btn-primary']">{{ running ? '停止算号' : '开始算号' }}</button>
