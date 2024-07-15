@@ -1,0 +1,15 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+deleted file mode 100644
+index 598829d66a609154d47e7aed452b880374c48fa0..0000000000000000000000000000000000000000
+diff --git a/dist/petite-vue.es.d.ts b/dist/petite-vue.es.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..e0fef8f2960420237e9b90b91432bf4069a1e0af
+--- /dev/null
++++ b/dist/petite-vue.es.d.ts
+@@ -0,0 +1,6 @@
++// how to use the types? · vuejs/petite-vue · Discussion #210
++// https://github.com/vuejs/petite-vue/discussions/210
++
++export { createApp } from './types/app';
++export { nextTick } from './types/scheduler';
++export { reactive } from '@vue/reactivity';
