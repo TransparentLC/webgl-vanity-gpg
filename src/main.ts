@@ -39,7 +39,7 @@ const app: {
     userID: [],
     thread: 16384,
     iteration: 4096,
-    pattern: '**** **** **** **** **** **** **** **** **FF FFFF',
+    pattern: '',
     patternNumber: '0123456789ABCDEF'[Math.floor(Math.random() * 16)],
     patternLength: 6 + Math.floor(Math.random() * 3),
     get backTime() {
