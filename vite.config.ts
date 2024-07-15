@@ -59,7 +59,7 @@ export default defineConfig({
                 decodeEntities: true,
                 removeComments: true,
                 removeAttributeQuotes: false,
-                removeRedundantAttributes: true,
+                // removeRedundantAttributes: true,
                 removeScriptTypeAttributes: true,
                 removeStyleLinkTypeAttributes: true,
                 removeEmptyAttributes: true,
