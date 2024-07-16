@@ -1,12 +1,21 @@
 import { createApp } from 'petite-vue';
+import {
+    readPrivateKey,
+    reformatKey,
+    SecretSubkeyPacket,
+} from 'openpgp/lightweight';
 import { createVanityKey } from './vanity-key.ts';
-import type {
+import tadaData from './tada.ogg?inline';
+import {
     EllipticCurveName,
     GenerateKeyOptions,
     KeyPair,
+    Subkey,
     UserID,
 } from 'openpgp/lightweight';
 import 'terminal.css';
+
+const tada = new Audio(tadaData);
 
 const app: {
     keyType: EllipticCurveName | '2048' | '3072' | '4096',
@@ -17,8 +26,13 @@ const app: {
     pattern: string,
     patternNumber: string,
     patternLength: number,
+    vanitySubkey: boolean,
+    notificationSfx: boolean,
+    nonstopMode: boolean,
     backTime: number,
     estimatedHashCount: bigint,
+    subkeyCombinerArmoredA: string,
+    subkeyCombinerArmoredB: string,
 
     running: boolean,
     generatedKey?: KeyPair,
@@ -26,10 +40,13 @@ const app: {
     hashCount: number,
     runningTime: number,
 
+    formatFingerprint: (x: string) => string,
+
     mounted: () => void,
     addUserID: () => void,
     patternHelper: () => void,
     toggleKeygen: () => Promise<void>,
+    subkeyCombine: () => Promise<void>,
 } = {
     keyType: 'curve25519',
     userIDInput: {
@@ -37,21 +54,39 @@ const app: {
         email: '',
     },
     userID: [],
-    thread: 16384,
-    iteration: 4096,
+    thread: 1048576,
+    iteration: 512,
     pattern: '',
-    patternNumber: '0123456789ABCDEF'[Math.floor(Math.random() * 16)],
+    patternNumber: '0123456789ABCDEFXXXX'[Math.floor(Math.random() * 20)],
     patternLength: 6 + Math.floor(Math.random() * 3),
+    vanitySubkey: false,
+    notificationSfx: false,
+    nonstopMode: false,
     get backTime() {
         return this.thread * this.iteration;
     },
     get estimatedHashCount() {
-        return 16n ** BigInt(this.pattern.split('').filter(e => '0123456789ABCDEFabcdef'.includes(e)).length);
+        let count = 0;
+        let countX = 0;
+        for (const c of this.pattern.toUpperCase()) {
+            if ('0123456789ABCDEF'.includes(c)) {
+                count++;
+            } else if (c === 'X') {
+                countX++;
+            }
+        }
+        return 16n ** BigInt(count + (countX ? countX - 1 : 0));
     },
+    subkeyCombinerArmoredA: '',
+    subkeyCombinerArmoredB: '',
     running: false,
     generatedKey: undefined,
     hashCount: 0,
     runningTime: 0,
+
+    formatFingerprint(x) {
+        return x.toUpperCase().match(/[^]{1,4}/g)!.join(' ');
+    },
 
     mounted() {
         this.patternHelper();
@@ -68,9 +103,7 @@ const app: {
     },
 
     patternHelper() {
-        this.pattern = ('*'.repeat(40 - this.patternLength) + this.patternNumber.repeat(this.patternLength))
-            .match(/[^]{1,4}/g)!
-            .join(' ');
+        this.pattern = this.formatFingerprint(('*'.repeat(40 - this.patternLength) + this.patternNumber.repeat(this.patternLength)));
     },
 
     async toggleKeygen() {
@@ -78,10 +111,13 @@ const app: {
             this.running = false;
             return;
         }
-        if (!this.userID.length || (this.userIDInput.name && this.userIDInput.email)) {
+        if (!this.userID.length) {
+            if (!this.userIDInput.name && !this.userIDInput.email) {
+                this.userIDInput.name = 'Dummy';
+                this.userIDInput.email = 'dummy@example.com';
+            }
             this.addUserID();
         }
-        this.generatedKey = undefined;
         this.hashCount = 0;
         this.runningTime = 0;
         this.running = true;
@@ -107,21 +143,61 @@ const app: {
                     options.rsaBits = parseInt(this.keyType);
                     break;
             }
-            this.generatedKey = await createVanityKey(
-                options,
-                this.pattern,
-                this.thread,
-                this.iteration,
-                (h, t) => {
-                    this.hashCount = h;
-                    this.runningTime = t;
-                },
-                () => !this.running,
-            );
+            do {
+                const generatedKey = await createVanityKey(
+                    options,
+                    this.pattern,
+                    this.thread,
+                    this.iteration,
+                    (h, t) => {
+                        this.hashCount = h;
+                        this.runningTime = t;
+                    },
+                    () => !this.running,
+                    this.vanitySubkey,
+                );
+                if (generatedKey) {
+                    this.generatedKey = generatedKey;
+                    console.log(generatedKey.privateKey.armor());
+                    console.log('Created:', generatedKey.publicKey.getCreationTime().toISOString());
+                    console.log('Fingerprint:', this.formatFingerprint(generatedKey.publicKey.getFingerprint()));
+                    if (this.notificationSfx) {
+                        tada.play();
+                    }
+                }
+            } while (this.running && this.nonstopMode);
         } catch (err) {
             alert(err);
         } finally {
             this.running = false;
+        }
+    },
+
+    async subkeyCombine() {
+        try {
+            const [privateKeyA, privateKeyB] = await Promise.all(
+                [this.subkeyCombinerArmoredA, this.subkeyCombinerArmoredB]
+                    .map(e => readPrivateKey({ armoredKey: e }))
+            );
+            privateKeyA.subkeys.push(
+                new Subkey(
+                    Object.assign(new SecretSubkeyPacket, privateKeyB.keyPacket),
+                    privateKeyA.toPublic(),
+                ),
+                ...privateKeyB.subkeys,
+            );
+            const combinedKey = await reformatKey({
+                privateKey: privateKeyA,
+                userIDs: privateKeyA.users.map(e => e.userID!),
+                date: privateKeyA.keyPacket.created,
+                format: 'object',
+            });
+            const el = document.createElement('a');
+            el.href = `data:text/plain;charset=utf-8,${encodeURIComponent(combinedKey.privateKey.armor())}`;
+            el.download = `${combinedKey.privateKey.getFingerprint().toUpperCase()}-sec.asc`;
+            el.click();
+        } catch (err) {
+            alert(err);
         }
     },
 }

@@ -11,7 +11,19 @@
                 display: none;
             }
             body {
-                --fonts: "Cascadia Code", "Consolas", "Menlo", "Monaco", "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New";
+                --fonts:
+                    ui-monospace,
+                    Menlo,
+                    Monaco,
+                    "Cascadia Code",
+                    "Segoe UI Mono",
+                    "Roboto Mono",
+                    "Oxygen Mono",
+                    "Ubuntu Monospace",
+                    "Source Code Pro",
+                    "Fira Mono",
+                    "Droid Sans Mono",
+                    Consolas;
                 --font-stack: var(--fonts), sans-serif;
                 --mono-font-stack: var(--fonts), monospace;
                 --global-font-size: 16px;
@@ -77,26 +89,49 @@
                     <input v-model="userIDInput.name" type="text" @keypress.enter="addUserID" placeholder="Dummy">
                     <input v-model="userIDInput.email" type="email" @keypress.enter="addUserID" placeholder="dummy@example.com">
                 </div>
-                <p>可以按 <kbd>Enter</kbd> 添加更多的用户 ID。</p>
-                <ul>
-                    <li v-for="e, i in userID">{{ e.name }} &lt;{{ e.email }}&gt; <span @click="userID.splice(i, 1)" style="color:var(--error-color);cursor:pointer">[x]</span></li>
-                </ul>
             </div>
+            <p>可以按 <kbd>Enter</kbd> 添加更多的用户 ID。</p>
+            <ul>
+                <li v-for="e, i in userID">{{ e.name }} &lt;{{ e.email }}&gt; <span @click="userID.splice(i, 1)" style="color:var(--error-color);cursor:pointer">[x]</span></li>
+            </ul>
             <div class="form-group">
                 <label>并行设定（线程数/迭代数）</label>
                 <div class="grid">
                     <input v-model="thread" type="number" min="1">
                     <input v-model="iteration" type="number" min="1">
                 </div>
-                <p>如果发现 GPU 占用率不够高，请增大这两个值。</p>
-                <p>你会得到一个生效时间距离现在 {{ (backTime > 2592000) ? `${Math.ceil(backTime / 2592000)} 个月` : `${Math.ceil(backTime / 86400)} 天` }}之内（最早为 <code>{{ (new Date(Date.now() - backTime * 1000)).toISOString() }}</code>）的密钥。</p>
             </div>
+            <p>根据 GPU 性能和占用率调节这两个值。</p>
+            <p>你会得到一个生效时间距离现在 {{ (backTime > 2592000) ? `${Math.ceil(backTime / 2592000)} 个月` : `${Math.ceil(backTime / 86400)} 天` }}之内（最早为 <code>{{ (new Date(Date.now() - backTime * 1000)).toISOString() }}</code>）的密钥。</p>
             <div class="form-group">
                 <label>密钥指纹格式</label>
                 <input v-model="pattern" type="text" required style="font-variant-ligatures:none">
-                <p>40 个十六进制数字，不区分大小写。空格会被忽略，其他 <code>[\dA-F]</code> 以外的字符表示对该位数字没有要求。</p>
-                <p>最后 <input v-model="patternLength" style="width:3em;padding:unset;text-align:center" type="number" min="1" max="40"> 个数字为 <input v-model="patternNumber" style="width:1em;padding:unset;text-align:center" type="text" pattern="[\dA-Fa-f]"> <a @click="patternHelper">快速设置</a></p>
-                <p>预计需要计算 {{ estimatedHashCount }} 次 hash，实际的计算次数可能是这个值的几分之一或几倍。</p>
+                <input v-model="vanitySubkey" type="checkbox">将格式应用到子密钥而不是主密钥上
+            </div>
+            <p>40 个十六进制数字，不区分大小写。空格会被忽略，<code>X</code> 表示只要这些位相同即可，其他 <code>[\dA-FX]</code> 以外的字符表示对该位数字没有要求。</p>
+            <p>最后 <input v-model="patternLength" style="width:3em;padding:unset;text-align:center" type="number" min="1" max="40"> 个数字为 <input v-model="patternNumber" style="width:1em;padding:unset;text-align:center" type="text" pattern="[\dA-Fa-fXx]"> <a @click="patternHelper">快速设置</a></p>
+            <p>预计需要计算 {{ estimatedHashCount }} 次 hash，实际的计算次数可能是这个值的几分之一或几倍，也许需要一点运气……</p>
+            <details style="margin-bottom:var(--global-line-height)">
+                <summary>把不同密钥的“靓号”合并到一起！</summary>
+                <div class="grid desktop-only">
+                    <div class="terminal-card" style="margin-bottom:var(--global-line-height)">
+                        <header>私钥 A</header>
+                        <textarea v-model="subkeyCombinerArmoredA" style="border:none" rows="10"></textarea>
+                    </div>
+                    <div class="terminal-card" style="margin-bottom:var(--global-line-height)">
+                        <header>私钥 B</header>
+                        <textarea v-model="subkeyCombinerArmoredB" style="border:none" rows="10"></textarea>
+                    </div>
+                </div>
+                <p>如果你希望生成主密钥和子密钥都是“靓号”的密钥，可以先分别生成两个不同的密钥，然后在这里合并。</p>
+                <p>私钥 B 的主密钥和子密钥将作为子密钥被附加到私钥 A 上。</p>
+                <p>然后，请自行使用 <code>gpg --edit-key</code> 编辑私钥，例如删除不需要的子密钥 <code>delkey</code>、修改密钥用途  <code>change-usage</code> 和有效期 <code>expire</code> 等，再输入 <code>save</code> 保存更改。</p>
+                <button @click="subkeyCombine" class="btn btn-block btn-ghost btn-primary">保存合并后的私钥</button>
+            </details>
+            <div class="form-group">
+                <input v-model="notificationSfx" type="checkbox">算号成功后播放提示音
+                <br>
+                <input v-model="nonstopMode" type="checkbox">不间断算号（在控制台中查看先前生成的密钥）
             </div>
             <button @click="toggleKeygen" :class="['btn', 'btn-block', running ? 'btn-error' : 'btn-primary']">{{ running ? '停止算号' : '开始算号' }}</button>
             <hr>
@@ -106,16 +141,22 @@
             <div class="grid desktop-only">
                 <div class="terminal-card" style="margin-bottom:var(--global-line-height)">
                     <header>私钥</header>
-                    <textarea :value="generatedKey?.privateKey.armor() || ''" style="border:none" rows="10"></textarea>
+                    <textarea :value="generatedKey?.privateKey.armor() || ''" style="border:none" rows="10" readonly></textarea>
                 </div>
                 <div class="terminal-card" style="margin-bottom:var(--global-line-height)">
                     <header>公钥</header>
-                    <textarea :value="generatedKey?.publicKey.armor() || ''" style="border:none" rows="10"></textarea>
+                    <textarea :value="generatedKey?.publicKey.armor() || ''" style="border:none" rows="10" readonly></textarea>
                 </div>
             </div>
             <p>生效时间：<code>{{ generatedKey?.publicKey.getCreationTime().toISOString() || '****-**-**T**:**:**.***Z' }}</code></p>
-            <p>指纹：<code>{{ (generatedKey?.publicKey.getFingerprint().toUpperCase() || '*'.repeat(40)).match(/[^]{1,4}/g).join(' ') }}</code></p>
-            <div class="grid"><a class="btn btn-ghost btn-primary" :href="`data:text/plain;charset=utf-8,${encodeURIComponent(generatedKey?.privateKey.armor() || '')}`" :download="generatedKey ? `${generatedKey.privateKey.getFingerprint().toUpperCase()}-sec.asc` : false">保存私钥</a> <a class="btn btn-ghost btn-primary" :href="`data:text/plain;charset=utf-8,${encodeURIComponent(generatedKey?.publicKey.armor() || '')}`" :download="generatedKey ? `${generatedKey.publicKey.getFingerprint().toUpperCase()}-pub.asc` : false">保存公钥</a></div>
+            <p>指纹（主密钥和子密钥）：</p>
+            <ul>
+                <li v-for="e in (generatedKey ? [generatedKey.publicKey, ...generatedKey.publicKey.subkeys].map(e => e.getFingerprint()) : ['*'.repeat(40), '*'.repeat(40)])"><code>{{ formatFingerprint(e) }}</code></li>
+            </ul>
+            <div class="grid">
+                <a class="btn btn-ghost btn-primary" :href="`data:text/plain;charset=utf-8,${encodeURIComponent(generatedKey?.privateKey.armor() || '')}`" :download="generatedKey ? `${generatedKey.privateKey.getFingerprint().toUpperCase()}-sec.asc` : 'nothing'">保存私钥</a>
+                <a class="btn btn-ghost btn-primary" :href="`data:text/plain;charset=utf-8,${encodeURIComponent(generatedKey?.publicKey.armor() || '')}`" :download="generatedKey ? `${generatedKey.publicKey.getFingerprint().toUpperCase()}-pub.asc` : 'nothing'">保存公钥</a>
+            </div>
             <hr>
             <footer style="text-align:center">
                 <p><small>© 2024 ✨小透明・宸✨ <a href="https://github.com/TransparentLC/webgl-vanity-gpg">源代码</a></small></p>

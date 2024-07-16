@@ -17,12 +17,16 @@ import fshaderString from './fshader.glsl?raw';
 
 const editPrivateKeyCreationTime = async (privateKey: PrivateKey, created: Date): Promise<KeyPair> => {
     privateKey = await readPrivateKey({armoredKey: privateKey.armor()});
-    privateKey.keyPacket.created = created;
-    // @ts-ignore
-    // computeFingerprintAndKeyID not in d.ts
-    // https://github.com/openpgpjs/openpgpjs/blob/a0337780b77093716ba92acb4a70b3bb5ceec87d/src/packet/public_key.js#L200
-    await privateKey.keyPacket.computeFingerprintAndKeyID();
-    privateKey.subkeys.forEach(e => e.keyPacket.created = created);
+    await Promise.all(
+        [privateKey.keyPacket, ...privateKey.subkeys.map(e => e.keyPacket)]
+            .map(e => {
+                e.created = created;
+                // @ts-ignore
+                // computeFingerprintAndKeyID not in d.ts
+                // https://github.com/openpgpjs/openpgpjs/blob/a0337780b77093716ba92acb4a70b3bb5ceec87d/src/packet/public_key.js#L200
+                return e.computeFingerprintAndKeyID();
+            })
+    );
     return await reformatKey({
         privateKey,
         userIDs: privateKey.users.map(e => e.userID!),
@@ -45,35 +49,47 @@ export const createVanityKey = async (
     iteration: number,
     progressCallback: (hash: number, time: DOMHighResTimeStamp) => void = () => {},
     checkAbort: (hash: number, time: DOMHighResTimeStamp) => boolean = () => false,
+    vanitySubkey: boolean = false,
 ): Promise<KeyPair | undefined> => {
     pattern = pattern.replaceAll(' ', '');
     if (pattern.length != 40) throw new Error('Invalid pattern');
-    const filter = [0, 8, 16, 24, 32].map((e, i) => {
-        const s = pattern.substring(e, e + 8);
-        let mask = '';
-        let value = '';
-        for (let i = 0; i < 8; i++) {
-            if (s[i].match(/[\da-f]/gi)) {
-                mask += 'F';
-                value += s[i].toUpperCase();
-            } else {
-                mask += '0';
-                value += '0';
+    const filter = [
+        ...[0, 8, 16, 24, 32].map((e, i) => {
+            const s = pattern.substring(e, e + 8);
+            let mask = '';
+            let value = '';
+            let activated = false;
+            for (let i = 0; i < 8; i++) {
+                if (s[i].match(/[\da-f]/gi)) {
+                    mask += 'F';
+                    value += s[i].toUpperCase();
+                    activated = true;
+                } else {
+                    mask += '0';
+                    value += '0';
+                }
             }
-        }
-        return (mask && value) ? `(h[${i}] & 0x${mask}u) == 0x${value}u` : '';
-    }).filter(Boolean).join(' && ') || 'true';
+            return activated ? `(h[${i}] & 0x${mask}u) == 0x${value}u` : '';
+        }),
+        ...pattern.split('')
+            .map((e, i) => e.toUpperCase() === 'X' ? i : null)
+            .filter(Boolean)
+            .reduce((acc, cur, idx, arr) => {
+                const leftIndex = Math.floor(arr[idx - 1]! / 8);
+                const rightIndex = Math.floor(cur! / 8);
+                const leftDigit = 7 - arr[idx - 1]! % 8;
+                const rightDigit = 7 - cur! % 8;
+                if (idx) {
+                    acc.push(`((h[${leftIndex}] ${rightDigit > leftDigit ? '<<' : '>>'} ${Math.abs(rightDigit - leftDigit) * 4}) & 0xF${'0'.repeat(rightDigit)}u) == (h[${rightIndex}] & 0xF${'0'.repeat(rightDigit)}u)`);
+                    // console.log(arr[idx - 1], cur, acc[acc.length - 1]);
+                }
+                return acc;
+            }, [] as string[]),
+    ].filter(Boolean).join(' && ') || 'true';
     // console.log(filter);
 
-    // console.log('Past limit:', thread * iteration, 'or', thread * iteration / 86400, 'days', 'or', thread * iteration / 86400 / 30, 'months');
-
-    const canvas = new OffscreenCanvas(thread, 1);
-    // const canvas = document.createElement('canvas');
-    // canvas.width = thread;
-    // canvas.height = 1;
-    // canvas.style.transform = 'scaleY(64)';
-    // document.body.appendChild(canvas);
-
+    const size = Math.round(Math.sqrt(thread));
+    const canvas = new OffscreenCanvas(size, size);
     const gl = canvas.getContext('webgl2')!;
     let initialized = false;
     let program: WebGLProgram | undefined;
@@ -83,7 +99,7 @@ export const createVanityKey = async (
     let hashData = new ArrayBuffer(0);
     let hashDataU8 = new Uint8Array;
     let hashDataU32 = new Uint32Array;
-    const resultData = new ArrayBuffer(canvas.width * 4);
+    const resultData = new ArrayBuffer(canvas.width * canvas.height * 4);
     const resultDataU8 = new Uint8Array(resultData);
     const resultDataU32 = new Uint32Array(resultData);
     let hashCount = 0;
@@ -96,7 +112,8 @@ export const createVanityKey = async (
                     ...config,
                     format: 'object',
                 });
-                fingerprintDataWithoutHeader = keypair.publicKey.keyPacket.write();
+
+                fingerprintDataWithoutHeader = (vanitySubkey ? keypair.publicKey.subkeys[0] : keypair.publicKey).keyPacket.write();
                 // console.log('Initial key:');
                 // console.log(keypair.privateKey.armor());
                 // console.log(keypair.publicKey.armor());
@@ -125,16 +142,23 @@ export const createVanityKey = async (
                     gl.attachShader(program, fs);
                     gl.linkProgram(program);
                     gl.useProgram(program);
-                    gl.uniform1ui(gl.getUniformLocation(program!, 'thread')!, canvas.width);
+                    gl.uniform1ui(gl.getUniformLocation(program!, 'width')!, canvas.width);
+                    gl.uniform1ui(gl.getUniformLocation(program!, 'height')!, canvas.height);
                     gl.uniform1ui(gl.getUniformLocation(program!, 'iteration')!, iteration);
                     hashDataLocation = gl.getUniformLocation(program!, 'hashData')!;
 
                     const ppos = gl.getAttribLocation(program, 'pos');
                     gl.enableVertexAttribArray(ppos);
                     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-                    const pbuf = new Float32Array([-1, 1]);
-                    gl.bufferData(gl.ARRAY_BUFFER, pbuf, gl.STATIC_DRAW);
-                    gl.vertexAttribPointer(ppos, 1, gl.FLOAT, false, 0, 0);
+                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                        -1, -1,
+                         1, -1,
+                        -1,  1,
+                        -1,  1,
+                         1, -1,
+                         1,  1,
+                    ]), gl.STATIC_DRAW);
+                    gl.vertexAttribPointer(ppos, 2, gl.FLOAT, false, 0, 0);
 
                     gl.clearColor(0, 0, 0, 0);
                     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -178,8 +202,7 @@ export const createVanityKey = async (
                 // 修改后密钥的UNIX时间戳
                 let timestamp: number = 0;
 
-                // 重绘整个画布就相当于触发使用GPU进行的计算了
-                // 一般是画两个三角形，但是对于thread x 1的画布画一条从左往右的线就可以了
+                // 用两个三角形重绘整个画布就相当于触发使用GPU进行的计算了
                 // 对于每个密钥来说
                 // 一共有thread个像素，每个像素尝试计算iteration个时间戳
                 // 第0轮期间，第0个像素计算t-0……第thread-1个像素计算t-(thread-1)
@@ -187,8 +210,8 @@ export const createVanityKey = async (
                 // 第iteration-1轮期间，第0个像素计算t-thread*(iteration-1)-0……第thread-1个像素计算t-thread*(iteration-1)-(thread-1)
                 // 一共会计算thread*iteration个时间戳
 
-                gl.drawArrays(gl.LINES, 0, 2);
-                gl.readPixels(0, 0, canvas.width, 1, gl.RGBA, gl.UNSIGNED_BYTE, resultDataU8);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, resultDataU8);
                 for (let i = 0; i < resultDataU32.length; i++) {
                     if (resultDataU32[i]) {
                         // 目标时间戳是0x01020304
@@ -202,7 +225,7 @@ export const createVanityKey = async (
                     }
                 }
 
-                hashCount += Math.min(Math.floor(Date.now() / 1000), thread * iteration);
+                hashCount += Math.min(Math.floor(Date.now() / 1000), size * size * iteration);
                 progressCallback(hashCount, performance.now() - startTime);
 
                 if (timestamp) {

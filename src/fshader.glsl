@@ -11,7 +11,8 @@ precision highp int;
 #define FILTER(h) (false)
 #endif
 
-uniform uint thread;
+uniform uint width;
+uniform uint height;
 uniform uint iteration;
 uniform uint hashData[LENGTH];
 out vec4 outColor;
@@ -21,8 +22,9 @@ void main() {
     for (int i = 0; i < LENGTH; i++) data[i] = hashData[i];
 
     uint timestamp = data[1];
+    uint size = width * height;
     for (uint iter = 0u; iter < iteration; iter++) {
-        data[1] = timestamp - iter * thread - uint(gl_FragCoord.x);
+        data[1] = timestamp - iter * size - uint(gl_FragCoord.x) - uint(gl_FragCoord.y) * width;
         // 避免出现溢出的情况
         if (data[1] > timestamp) break;
 
