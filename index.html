@@ -129,7 +129,9 @@
                 <button @click="subkeyCombine" class="btn btn-block btn-ghost btn-primary">保存合并后的私钥</button>
             </details>
             <div class="form-group">
-                <input v-model="notificationSfx" type="checkbox">算号成功后播放提示音
+                <input v-model="notification.sfx" type="checkbox">算号成功后播放提示音
+                <br>
+                <input v-model="notification.ntfy" type="checkbox">算号成功后使用 <a href="https://ntfy.sh/app">ntfy</a> 发送通知 <input v-model="notification.ntfyTopic" type="text" style="width:unset;padding:unset" placeholder="主题名称" pattern="[\-_A-Za-z\d]{1,64}">
                 <br>
                 <input v-model="nonstopMode" type="checkbox">不间断算号（在控制台中查看先前生成的密钥）
             </div>

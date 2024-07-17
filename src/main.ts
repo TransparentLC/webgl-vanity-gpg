@@ -27,7 +27,11 @@ const app: {
     patternNumber: string,
     patternLength: number,
     vanitySubkey: boolean,
-    notificationSfx: boolean,
+    notification: {
+        sfx: boolean,
+        ntfy: boolean,
+        ntfyTopic: string,
+    },
     nonstopMode: boolean,
     backTime: number,
     estimatedHashCount: bigint,
@@ -60,7 +64,11 @@ const app: {
     patternNumber: '0123456789ABCDEFXXXX'[Math.floor(Math.random() * 20)],
     patternLength: 6 + Math.floor(Math.random() * 3),
     vanitySubkey: false,
-    notificationSfx: false,
+    notification: {
+        sfx: false,
+        ntfy: false,
+        ntfyTopic: '',
+    },
     nonstopMode: false,
     get backTime() {
         return this.thread * this.iteration;
@@ -158,11 +166,25 @@ const app: {
                 );
                 if (generatedKey) {
                     this.generatedKey = generatedKey;
-                    console.log(generatedKey.privateKey.armor());
-                    console.log('Created:', generatedKey.publicKey.getCreationTime().toISOString());
-                    console.log('Fingerprint:', this.formatFingerprint(generatedKey.publicKey.getFingerprint()));
-                    if (this.notificationSfx) {
+                    const armor = generatedKey.privateKey.armor();
+                    const created = generatedKey.publicKey.getCreationTime().toISOString();
+                    const fingerprint = this.formatFingerprint(generatedKey.publicKey.getFingerprint());
+                    console.log(armor);
+                    console.log('Created:', created);
+                    console.log('Fingerprint:', fingerprint);
+                    if (this.notification.sfx) {
                         tada.play();
+                    }
+                    if (this.notification.ntfy && this.notification.ntfyTopic) {
+                        fetch(`https://ntfy.sh/`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                topic: this.notification.ntfyTopic,
+                                markdown: true,
+                                title: 'webgl-vanity-gpg 计算出了新的密钥！',
+                                message: 'Fingerprint: `' + fingerprint + '`\n\nCreated: ' + created + '\n\n请回到打开的 webgl-vanity-gpg 页面，在页面上/控制台中查看生成的密钥。',
+                            }),
+                        });
                     }
                 }
             } while (this.running && this.nonstopMode);
