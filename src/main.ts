@@ -40,6 +40,7 @@ const app: {
 
     running: boolean,
     generatedKey?: KeyPair,
+    generatedKeyHistory: KeyPair[],
 
     hashCount: number,
     runningTime: number,
@@ -89,6 +90,7 @@ const app: {
     subkeyCombinerArmoredB: '',
     running: false,
     generatedKey: undefined,
+    generatedKeyHistory: [],
     hashCount: 0,
     runningTime: 0,
 
@@ -166,12 +168,7 @@ const app: {
                 );
                 if (generatedKey) {
                     this.generatedKey = generatedKey;
-                    const armor = generatedKey.privateKey.armor();
-                    const created = generatedKey.publicKey.getCreationTime().toISOString();
-                    const fingerprint = this.formatFingerprint(generatedKey.publicKey.getFingerprint());
-                    console.log(armor);
-                    console.log('Created:', created);
-                    console.log('Fingerprint:', fingerprint);
+                    this.generatedKeyHistory.push(generatedKey);
                     if (this.notification.sfx) {
                         tada.play();
                     }
@@ -182,7 +179,7 @@ const app: {
                                 topic: this.notification.ntfyTopic,
                                 markdown: true,
                                 title: 'webgl-vanity-gpg 计算出了新的密钥！',
-                                message: 'Fingerprint: `' + fingerprint + '`\n\nCreated: ' + created + '\n\n请回到打开的 webgl-vanity-gpg 页面，在页面上/控制台中查看生成的密钥。',
+                                message: 'Fingerprint: `' + this.formatFingerprint(generatedKey.publicKey.getFingerprint()) + '`\n\nCreated: ' + generatedKey.publicKey.getCreationTime().toISOString() + '\n\n请回到打开的 webgl-vanity-gpg 页面，在页面上/控制台中查看生成的密钥。',
                             }),
                         });
                     }

@@ -63,12 +63,13 @@
                 <li><a href="https://blog.dejavu.moe/posts/the-scientific-vanity-pgp-counting-guide/">某科学的 PGP 算号指南</a></li>
             </ul>
             <p>密钥使用 <a href="https://openpgpjs.org/">OpenPGP.js</a> 在浏览器中生成，不会发送到其他地方。如果仍然担心这一点，可以检查源代码、查看浏览器开发者工具的“网络”部分、或在页面加载完成后断网使用。</p>
+            <p>注意：浏览器可能会限制在后台标签页中运行的内容，因此算号时请<strong>避免切换到其它标签页或将浏览器窗口最小化</strong>，否则会严重影响算号速度。作为替代，你可以将这个标签页拖出成为一个单独的窗口，使用各类工具将窗口置顶，然后拖到屏幕边缘。</p>
             <hr>
             <div class="form-group">
                 <label>密钥类型</label>
                 <select v-model="keyType">
                     <optgroup label="ECC">
-                        <option value="curve25519">Curve25519</option>
+                        <option value="curve25519">Curve25519 (ed25519/cv25519)</option>
                         <option value="p256">NIST P-256</option>
                         <option value="p384">NIST P-384</option>
                         <option value="p521">NIST P-521</option>
@@ -133,13 +134,20 @@
                 <br>
                 <input v-model="notification.ntfy" type="checkbox">算号成功后使用 <a href="https://ntfy.sh/app">ntfy</a> 发送通知 <input v-model="notification.ntfyTopic" type="text" style="width:unset;padding:unset" placeholder="主题名称" pattern="[\-_A-Za-z\d]{1,64}">
                 <br>
-                <input v-model="nonstopMode" type="checkbox">不间断算号（在控制台中查看先前生成的密钥）
+                <input v-model="nonstopMode" type="checkbox">不间断算号
             </div>
             <button @click="toggleKeygen" :class="['btn', 'btn-block', running ? 'btn-error' : 'btn-primary']">{{ running ? '停止算号' : '开始算号' }}</button>
             <hr>
             <blockquote>
-                <p>已计算 hash：{{ hashCount }}<br>耗时：{{ Math.round(runningTime / 1000 * 100) / 100 }}s<br>速度：{{ Math.round(hashCount / runningTime * 1000 * 100) / 100 || 0 }} hash/s</p>
+                <p>已计算 hash：{{ hashCount }} {{ `(${Number(BigInt(hashCount) * 100n / estimatedHashCount) / 100}x estimated)` }}<br>耗时：{{ Math.round(runningTime / 1000 * 100) / 100 }}s<br>速度：{{ Math.round(hashCount / runningTime * 1000 * 100) / 100 || 0 }} hash/s</p>
             </blockquote>
+            <details style="margin-bottom:var(--global-line-height)">
+                <summary>生成的密钥</summary>
+                <ul>
+                    <li v-for="e, i in generatedKeyHistory" style="cursor:pointer"><a @click="generatedKey = e"><code>{{ formatFingerprint(e.publicKey.getFingerprint().substring(24, 40)) }}</code> {{ `(${[e.publicKey, ...e.publicKey.subkeys].map(t => {const a = t.getAlgorithmInfo(); return a.bits ? `rsa${a.bits}` : a.curve}).join(', ')})` }} {{ e.publicKey.getCreationTime().toISOString() }}</a> <span @click="generatedKeyHistory.splice(i, 1)" style="color:var(--error-color);cursor:pointer">[x]</span></li>
+                </ul>
+                <p><span @click="generatedKeyHistory.length = 0" style="color:var(--error-color);cursor:pointer">[清除生成记录]</span></p>
+            </details>
             <div class="grid desktop-only">
                 <div class="terminal-card" style="margin-bottom:var(--global-line-height)">
                     <header>私钥</header>
