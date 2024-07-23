@@ -108,6 +108,8 @@ export const createVanityKey = async (
     return await new Promise<KeyPair | undefined>((resolve, reject) => {
         const run = async () => {
             try {
+                if (gl.isContextLost()) throw new Error('WebGL context lost');
+
                 const keypair: KeyPair = await generateKey({
                     ...config,
                     format: 'object',
