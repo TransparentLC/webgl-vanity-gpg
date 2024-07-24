@@ -6,6 +6,7 @@ import {
 } from 'openpgp/lightweight';
 import { createVanityKey } from './vanity-key.ts';
 import tadaData from './tada.ogg?inline';
+import silenceData from './near-silence.ogg?inline';
 import {
     EllipticCurveName,
     GenerateKeyOptions,
@@ -16,6 +17,13 @@ import {
 import 'terminal.css';
 
 const tada = new Audio(tadaData);
+
+// 通过播放音频阻止浏览器降低setTimeout的频率
+// 完全静音的音频是没有效果的……
+// ffmpeg -f lavfi -i "sine=frequency=1:duration=1" -c:a libopus -ar 8k -b:a 1k -movflags +faststart -fflags +bitexact -map_metadata -1 -dn near-silence.ogg
+const silence = new Audio(silenceData);
+silence.volume = .01;
+silence.loop = true;
 
 const app: {
     keyType: EllipticCurveName | '2048' | '3072' | '4096',
@@ -131,6 +139,7 @@ const app: {
         this.hashCount = 0;
         this.runningTime = 0;
         this.running = true;
+        silence.play();
         try {
             const options: GenerateKeyOptions = {
                 userIDs: this.userID,
@@ -189,6 +198,7 @@ const app: {
             alert(err);
         } finally {
             this.running = false;
+            silence.pause();
         }
     },
 
