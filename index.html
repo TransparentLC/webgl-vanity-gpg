@@ -145,7 +145,7 @@
                 <ul>
                     <li v-for="e, i in generatedKeyHistory" style="cursor:pointer"><a @click="generatedKey = e"><code>{{ formatFingerprint(e.publicKey.getFingerprint().substring(24, 40)) }}</code> {{ `(${[e.publicKey, ...e.publicKey.subkeys].map(t => {const a = t.getAlgorithmInfo(); return a.bits ? `rsa${a.bits}` : a.curve}).join(', ')})` }} {{ e.publicKey.getCreationTime().toISOString() }}</a> <span @click="generatedKeyHistory.splice(i, 1)" style="color:var(--error-color);cursor:pointer">[x]</span></li>
                 </ul>
-                <p><span @click="generatedKeyHistory.length = 0" style="color:var(--error-color);cursor:pointer">[清除生成记录]</span></p>
+                <p><span @click="bulkDownload" style="color:var(--primary-color);cursor:pointer">[批量下载私钥]</span> <span @click="generatedKeyHistory.length = 0" style="color:var(--error-color);cursor:pointer">[清除生成记录]</span></p>
             </details>
             <div class="grid desktop-only">
                 <div class="terminal-card" style="margin-bottom:var(--global-line-height)">

@@ -4,6 +4,7 @@ import {
     reformatKey,
     SecretSubkeyPacket,
 } from 'openpgp/lightweight';
+import { TarWriter } from '@gera2ld/tarjs';
 import { createVanityKey } from './vanity-key.ts';
 import tadaData from './tada.ogg?inline';
 import silenceData from './near-silence.ogg?inline';
@@ -59,6 +60,7 @@ const app: {
     addUserID: () => void,
     patternHelper: () => void,
     toggleKeygen: () => Promise<void>,
+    bulkDownload: () => Promise<void>,
     subkeyCombine: () => Promise<void>,
 } = {
     keyType: 'curve25519',
@@ -122,6 +124,17 @@ const app: {
 
     patternHelper() {
         this.pattern = this.formatFingerprint(('*'.repeat(40 - this.patternLength) + this.patternNumber.repeat(this.patternLength)));
+    },
+
+    async bulkDownload() {
+        if (!this.generatedKeyHistory.length) return;
+        const tar = new TarWriter;
+        this.generatedKeyHistory.forEach(e => tar.addFile(`${e.privateKey.getFingerprint().toUpperCase()}-sec.asc`, e.privateKey.armor()));
+        const el = document.createElement('a');
+        el.href = URL.createObjectURL(await tar.write());
+        el.download = 'vanity-keys.tar';
+        el.click();
+        URL.revokeObjectURL(el.href);
     },
 
     async toggleKeygen() {
