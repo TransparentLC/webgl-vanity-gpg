@@ -141,11 +141,11 @@
                 <p>已计算 hash：{{ hashCount }} {{ `(${Number(BigInt(hashCount) * 100n / estimatedHashCount) / 100}x estimated)` }}<br>耗时：{{ Math.round(runningTime / 1000 * 100) / 100 }}s<br>速度：{{ Math.round(hashCount / runningTime * 1000 * 100) / 100 || 0 }} hash/s</p>
             </blockquote>
             <details style="margin-bottom:var(--global-line-height)">
-                <summary>生成的密钥</summary>
+                <summary>生成的密钥（已生成 {{ generatedKeyHistory.length }} 个）</summary>
                 <ul>
                     <li v-for="e, i in generatedKeyHistory" style="cursor:pointer"><a @click="generatedKey = e"><code>{{ formatFingerprint(e.publicKey.getFingerprint().substring(24, 40)) }}</code> {{ `(${[e.publicKey, ...e.publicKey.subkeys].map(t => {const a = t.getAlgorithmInfo(); return a.bits ? `rsa${a.bits}` : a.curve}).join(', ')})` }} {{ e.publicKey.getCreationTime().toISOString() }}</a> <span @click="generatedKeyHistory.splice(i, 1)" style="color:var(--error-color);cursor:pointer">[x]</span></li>
                 </ul>
-                <p><span @click="bulkDownload" style="color:var(--primary-color);cursor:pointer">[批量下载私钥]</span> <span @click="generatedKeyHistory.length = 0" style="color:var(--error-color);cursor:pointer">[清除生成记录]</span></p>
+                <p><span @click="bulkDownload" style="color:var(--primary-color);cursor:pointer">[批量保存私钥]</span> <span @click="generatedKeyHistory.length = 0" style="color:var(--error-color);cursor:pointer">[清除生成记录]</span></p>
             </details>
             <div class="grid desktop-only">
                 <div class="terminal-card" style="margin-bottom:var(--global-line-height)">
