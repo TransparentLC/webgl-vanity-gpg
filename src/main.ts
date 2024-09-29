@@ -5,7 +5,7 @@ import {
     SecretSubkeyPacket,
 } from 'openpgp/lightweight';
 import { TarWriter } from '@gera2ld/tarjs';
-import { createVanityKey } from './vanity-key.ts';
+import { patternToFilter, createVanityKey } from './vanity-key.ts';
 import tadaData from './tada.ogg?inline';
 import silenceData from './near-silence.ogg?inline';
 import {
@@ -35,6 +35,7 @@ const app: {
     pattern: string,
     patternNumber: string,
     patternLength: number,
+    filter: string,
     vanitySubkey: boolean,
     notification: {
         sfx: boolean,
@@ -59,6 +60,7 @@ const app: {
     mounted: () => void,
     addUserID: () => void,
     patternHelper: () => void,
+    showAutoFilter: () => void,
     toggleKeygen: () => Promise<void>,
     bulkDownload: () => Promise<void>,
     subkeyCombine: () => Promise<void>,
@@ -74,6 +76,7 @@ const app: {
     pattern: '',
     patternNumber: '0123456789ABCDEFXXXX'[Math.floor(Math.random() * 20)],
     patternLength: 6 + Math.floor(Math.random() * 3),
+    filter: '',
     vanitySubkey: false,
     notification: {
         sfx: false,
@@ -124,6 +127,10 @@ const app: {
 
     patternHelper() {
         this.pattern = this.formatFingerprint(('*'.repeat(40 - this.patternLength) + this.patternNumber.repeat(this.patternLength)));
+    },
+
+    showAutoFilter() {
+        alert(patternToFilter(this.pattern));
     },
 
     async bulkDownload() {
@@ -178,7 +185,7 @@ const app: {
             do {
                 const generatedKey = await createVanityKey(
                     options,
-                    this.pattern,
+                    this.filter.replaceAll('\n', ' ') || patternToFilter(this.pattern),
                     this.thread,
                     this.iteration,
                     (h, t) => {

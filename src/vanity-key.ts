@@ -42,18 +42,10 @@ const swap32 = (x: number) => (
     ((x >> 24) &   0xFF)
 ) >>> 0;
 
-export const createVanityKey = async (
-    config: GenerateKeyOptions,
-    pattern: string,
-    thread: number,
-    iteration: number,
-    progressCallback: (hash: number, time: DOMHighResTimeStamp) => void = () => {},
-    checkAbort: (hash: number, time: DOMHighResTimeStamp) => boolean = () => false,
-    vanitySubkey: boolean = false,
-): Promise<KeyPair | undefined> => {
+export const patternToFilter = (pattern: string) => {
     pattern = pattern.replaceAll(' ', '');
     if (pattern.length != 40) throw new Error('Invalid pattern');
-    const filter = [
+    return [
         ...[0, 8, 16, 24, 32].map((e, i) => {
             const s = pattern.substring(e, e + 8);
             let mask = '';
@@ -86,8 +78,17 @@ export const createVanityKey = async (
                 return acc;
             }, [] as string[]),
     ].filter(Boolean).join(' && ') || 'true';
-    // console.log(filter);
+}
 
+export const createVanityKey = async (
+    config: GenerateKeyOptions,
+    filter: string,
+    thread: number,
+    iteration: number,
+    progressCallback: (hash: number, time: DOMHighResTimeStamp) => void = () => {},
+    checkAbort: (hash: number, time: DOMHighResTimeStamp) => boolean = () => false,
+    vanitySubkey: boolean = false,
+): Promise<KeyPair | undefined> => {
     const size = Math.round(Math.sqrt(thread));
     const canvas = new OffscreenCanvas(size, size);
     const gl = canvas.getContext('webgl2')!;
