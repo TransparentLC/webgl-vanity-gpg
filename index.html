@@ -147,7 +147,7 @@
             <button @click="toggleKeygen" :class="['btn', 'btn-block', running ? 'btn-error' : 'btn-primary']">{{ running ? '停止算号' : '开始算号' }}</button>
             <hr>
             <blockquote>
-                <p>已计算 hash：{{ hashCount }} {{ `(${Number(BigInt(hashCount) * 100n / estimatedHashCount) / 100}x estimated)` }}<br>耗时：{{ Math.round(runningTime / 1000 * 100) / 100 }}s<br>速度：{{ Math.round(hashCount / runningTime * 1000 * 100) / 100 || 0 }} hash/s</p>
+                <p>已计算 hash：{{ hashCount }} <span v-if="!filter">{{ `(${Number(BigInt(hashCount) * 100n / estimatedHashCount) / 100}x estimated)` }}</span><br>耗时：{{ Math.round(runningTime / 1000 * 100) / 100 }}s<br>速度：{{ Math.round(hashCount / runningTime * 1000 * 100) / 100 || 0 }} hash/s</p>
             </blockquote>
             <details style="margin-bottom:var(--global-line-height)">
                 <summary>生成的密钥（已生成 {{ generatedKeyHistory.length }} 个）</summary>
