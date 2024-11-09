@@ -43,6 +43,8 @@ const app: {
         ntfyTopic: string,
     },
     nonstopMode: boolean,
+    saveToDirectory: boolean,
+    saveToDirectoryHandle?: FileSystemDirectoryHandle,
     backTime: number,
     estimatedHashCount: bigint,
     subkeyCombinerArmoredA: string,
@@ -60,12 +62,13 @@ const app: {
     mounted: () => void,
     addUserID: () => void,
     patternHelper: () => void,
+    setSaveDirectory: () => Promise<void>,
     showAutoFilter: () => void,
     toggleKeygen: () => Promise<void>,
     bulkDownload: () => Promise<void>,
     subkeyCombine: () => Promise<void>,
 } = {
-    keyType: 'curve25519',
+    keyType: 'curve25519Legacy',
     userIDInput: {
         name: '',
         email: '',
@@ -84,6 +87,8 @@ const app: {
         ntfyTopic: '',
     },
     nonstopMode: false,
+    saveToDirectory: false,
+    saveToDirectoryHandle: undefined,
     get backTime() {
         return this.thread * this.iteration;
     },
@@ -129,6 +134,13 @@ const app: {
         this.pattern = this.formatFingerprint(('*'.repeat(40 - this.patternLength) + this.patternNumber.repeat(this.patternLength)));
     },
 
+    async setSaveDirectory() {
+        if (!window.showDirectoryPicker) {
+            return alert('你的浏览器不支持 File System Access API。\n参见：https://caniuse.com/native-filesystem-api');
+        }
+        this.saveToDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' }).catch(() => undefined);
+    },
+
     showAutoFilter() {
         alert(patternToFilter(this.pattern));
     },
@@ -165,10 +177,10 @@ const app: {
                 userIDs: this.userID,
             };
             switch (this.keyType) {
-                case 'curve25519':
-                case 'p256':
-                case 'p384':
-                case 'p521':
+                case 'curve25519Legacy':
+                case 'nistP256':
+                case 'nistP384':
+                case 'nistP521':
                 case 'brainpoolP256r1':
                 case 'brainpoolP384r1':
                 case 'brainpoolP512r1':
@@ -211,6 +223,12 @@ const app: {
                                 message: 'Fingerprint: `' + this.formatFingerprint(generatedKey.publicKey.getFingerprint()) + '`\n\nCreated: ' + generatedKey.publicKey.getCreationTime().toISOString() + '\n\n请回到打开的 webgl-vanity-gpg 页面，在页面上/控制台中查看生成的密钥。',
                             }),
                         });
+                    }
+                    if (this.saveToDirectory && this.saveToDirectoryHandle) {
+                        const fileHandle = await this.saveToDirectoryHandle.getFileHandle(`${generatedKey.privateKey.getFingerprint().toUpperCase()}-sec.asc`, { create: true });
+                        const stream = await fileHandle.createWritable();
+                        await stream.write(new Blob([generatedKey.privateKey.armor()]));
+                        await stream.close();
                     }
                 }
             } while (this.running && this.nonstopMode);
