@@ -26,10 +26,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          sudo apt install mono-runtime
           gh release download --repo laurentlb/shader-minifier --pattern shader_minifier.exe
           chmod +x shader_minifier.exe
           mv shader_minifier.exe /usr/local/bin/shader_minifier
-      - uses: mxschmitt/action-tmate@v3
       - name: Build
         run: pnpm run build
       - name: Deploy
