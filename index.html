@@ -63,6 +63,8 @@
                 <li><a href="https://blog.dejavu.moe/posts/the-scientific-vanity-pgp-counting-guide/">某科学的 PGP 算号指南</a></li>
             </ul>
             <p>密钥使用 <a href="https://openpgpjs.org/">OpenPGP.js</a> 在浏览器中生成，不会发送到其他地方。如果仍然担心这一点，可以检查源代码、查看浏览器开发者工具的“网络”部分、或在页面加载完成后断网使用。</p>
+            <p>如果你是 Firefox 用户，请点击地址栏左侧的小盾牌图标禁用“增强型跟踪保护”，否则生成的密钥指纹会不符合你设定的格式。</p>
+            <p>使用 Rust 和 OpenCL 实现的本地运行版，同样开箱即用，算号效率更高：<a href="https://github.com/TransparentLC/opencl_vanity_gpg">opencl_vanity_gpg</a></p>
             <hr>
             <div class="form-group">
                 <label>密钥类型</label>
