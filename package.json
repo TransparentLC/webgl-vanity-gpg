@@ -24,7 +24,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "petite-vue@0.4.1": "patches/petite-vue@0.4.1.patch"
+      "petite-vue@0.4.1": "patches/petite-vue@0.4.1.patch",
+      "openpgp@6.3.0": "patches/openpgp@6.3.0.patch"
     }
   }
 }

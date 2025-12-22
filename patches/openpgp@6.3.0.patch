@@ -1,0 +1,13 @@
+diff --git a/openpgp.d.ts b/openpgp.d.ts
+index 34cf51d1c6d5fe619c5acd1ad68f542dcc184c82..643c22c0a7060474d545e3b41b26fa449d22c239 100644
+--- a/openpgp.d.ts
++++ b/openpgp.d.ts
+@@ -667,7 +667,7 @@ interface SerializedKeyPair<T extends string | Uint8Array> {
+   privateKey: T;
+   publicKey: T;
+ }
+-interface KeyPair {
++export interface KeyPair {
+   privateKey: PrivateKey;
+   publicKey: PublicKey;
+ }

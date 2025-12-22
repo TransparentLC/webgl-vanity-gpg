@@ -4,7 +4,7 @@ import {
     reformatKey,
 } from 'openpgp/lightweight';
 import type {
-    GenerateKeyOptions,
+    KeyOptions,
     KeyPair,
     PrivateKey,
 } from 'openpgp/lightweight';
@@ -81,7 +81,7 @@ export const patternToFilter = (pattern: string) => {
 }
 
 export const createVanityKey = async (
-    config: GenerateKeyOptions,
+    config: KeyOptions,
     filter: string,
     thread: number,
     iteration: number,
@@ -116,7 +116,7 @@ export const createVanityKey = async (
                     format: 'object',
                 });
 
-                fingerprintDataWithoutHeader = (vanitySubkey ? keypair.publicKey.subkeys[0] : keypair.publicKey).keyPacket.write();
+                fingerprintDataWithoutHeader = (vanitySubkey ? keypair.publicKey.subkeys[0] : keypair.publicKey).keyPacket.write() as Uint8Array<ArrayBuffer>;
                 // console.log('Initial key:');
                 // console.log(keypair.privateKey.armor());
                 // console.log(keypair.publicKey.armor());

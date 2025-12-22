@@ -10,7 +10,7 @@ import tadaData from './tada.ogg?inline';
 import silenceData from './near-silence.ogg?inline';
 import {
     EllipticCurveName,
-    GenerateKeyOptions,
+    KeyOptions,
     KeyPair,
     Subkey,
     UserID,
@@ -173,7 +173,7 @@ const app: {
         this.running = true;
         silence.play();
         try {
-            const options: GenerateKeyOptions = {
+            const options: KeyOptions = {
                 userIDs: this.userID,
             };
             switch (this.keyType) {
