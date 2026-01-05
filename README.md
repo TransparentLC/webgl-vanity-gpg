@@ -25,8 +25,10 @@
 | [lachesis/scallion](https://github.com/lachesis/scallion) | GPU |  | 仅支持 RSA，已停止更新 |
 | [Victrid/memorable-pgpgen](https://github.com/Victrid/memorable-pgpgen) | GPU |  | 没有给出速度 |
 | [cuihaoleo/gpg-fingerprint-filter-gpu](https://github.com/cuihaoleo/gpg-fingerprint-filter-gpu) | GPU | 10b | RTX 3090 数据来自“算号指南” |
+| 这个项目 | GPU | 1b | Radeon 680M |
 | 这个项目 | GPU | 2b | GTX 1070 |
 | 这个项目 | GPU | 7b | RTX A5500 |
+| 这个项目 | GPU | 7b | Radeon RX 7700 XT |
 
 以上的速度均为生成 Curve25519 类型的密钥的速度。
 
